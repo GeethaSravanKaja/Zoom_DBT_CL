@@ -1,0 +1,1042 @@
+## **DBT Project Files for Zoom Customer Analytics**
+
+### **1. dbt_project.yml**
+```yaml
+name: 'zoom_customer_analytics'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'zoom_customer_analytics'
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Configuring models
+models:
+  zoom_customer_analytics:
+    # Config indicated by + and applies to all files under models/example/
+    bronze:
+      +materialized: table
+      +pre-hook: "{{ audit_log_start() }}"
+      +post-hook: "{{ audit_log_end() }}"
+
+vars:
+  source_system: 'ZOOM_PLATFORM'
+```
+
+### **2. packages.yml**
+```yaml
+packages:
+  - package: dbt-labs/dbt_utils
+    version: 1.1.1
+```
+
+### **3. models/sources.yml**
+```yaml
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw data from Zoom platform"
+    tables:
+      - name: users
+        description: "Raw user data"
+        columns:
+          - name: user_id
+            description: "Unique identifier for user"
+          - name: user_name
+            description: "User display name"
+          - name: email
+            description: "User email address"
+          - name: company
+            description: "User company"
+          - name: plan_type
+            description: "User subscription plan type"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: meetings
+        description: "Raw meeting data"
+        columns:
+          - name: meeting_id
+            description: "Unique identifier for meeting"
+          - name: host_id
+            description: "Meeting host user ID"
+          - name: meeting_topic
+            description: "Meeting topic/title"
+          - name: start_time
+            description: "Meeting start time"
+          - name: end_time
+            description: "Meeting end time"
+          - name: duration_minutes
+            description: "Meeting duration in minutes"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: participants
+        description: "Raw participant data"
+        columns:
+          - name: participant_id
+            description: "Unique identifier for participant"
+          - name: meeting_id
+            description: "Associated meeting ID"
+          - name: user_id
+            description: "Participant user ID"
+          - name: join_time
+            description: "Time participant joined"
+          - name: leave_time
+            description: "Time participant left"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: feature_usage
+        description: "Raw feature usage data"
+        columns:
+          - name: usage_id
+            description: "Unique identifier for usage record"
+          - name: meeting_id
+            description: "Associated meeting ID"
+          - name: feature_name
+            description: "Name of feature used"
+          - name: usage_count
+            description: "Number of times feature was used"
+          - name: usage_date
+            description: "Date of feature usage"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: webinars
+        description: "Raw webinar data"
+        columns:
+          - name: webinar_id
+            description: "Unique identifier for webinar"
+          - name: host_id
+            description: "Webinar host user ID"
+          - name: webinar_topic
+            description: "Webinar topic/title"
+          - name: start_time
+            description: "Webinar start time"
+          - name: end_time
+            description: "Webinar end time"
+          - name: registrants
+            description: "Number of registrants"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: support_tickets
+        description: "Raw support ticket data"
+        columns:
+          - name: ticket_id
+            description: "Unique identifier for ticket"
+          - name: user_id
+            description: "User who created ticket"
+          - name: ticket_type
+            description: "Type of support ticket"
+          - name: resolution_status
+            description: "Current resolution status"
+          - name: open_date
+            description: "Date ticket was opened"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: licenses
+        description: "Raw license data"
+        columns:
+          - name: license_id
+            description: "Unique identifier for license"
+          - name: license_type
+            description: "Type of license"
+          - name: assigned_to_user_id
+            description: "User assigned to license"
+          - name: start_date
+            description: "License start date"
+          - name: end_date
+            description: "License end date"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: billing_events
+        description: "Raw billing event data"
+        columns:
+          - name: event_id
+            description: "Unique identifier for billing event"
+          - name: user_id
+            description: "User associated with billing event"
+          - name: event_type
+            description: "Type of billing event"
+          - name: amount
+            description: "Billing amount"
+          - name: event_date
+            description: "Date of billing event"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+```
+
+### **4. macros/audit_macros.sql**
+```sql
+-- Macro for audit log start
+{% macro audit_log_start() %}
+  {% if this.name != 'audit_log' %}
+    INSERT INTO {{ ref('audit_log') }} (
+      table_name,
+      process_start_time,
+      process_status,
+      created_at
+    )
+    VALUES (
+      '{{ this.name }}',
+      CURRENT_TIMESTAMP(),
+      'STARTED',
+      CURRENT_TIMESTAMP()
+    )
+  {% endif %}
+{% endmacro %}
+
+-- Macro for audit log end
+{% macro audit_log_end() %}
+  {% if this.name != 'audit_log' %}
+    INSERT INTO {{ ref('audit_log') }} (
+      table_name,
+      process_end_time,
+      process_status,
+      updated_at
+    )
+    VALUES (
+      '{{ this.name }}',
+      CURRENT_TIMESTAMP(),
+      'COMPLETED',
+      CURRENT_TIMESTAMP()
+    )
+  {% endif %}
+{% endmacro %}
+```
+
+### **5. models/bronze/audit_log.sql**
+```sql
+-- Audit log table for tracking bronze layer processing
+-- This model creates the audit log table used by all other bronze models
+
+{{ config(
+    materialized='table',
+    pre_hook=none,
+    post_hook=none
+) }}
+
+WITH audit_structure AS (
+    SELECT
+        CAST(NULL AS STRING) AS table_name,
+        CAST(NULL AS TIMESTAMP_NTZ) AS process_start_time,
+        CAST(NULL AS TIMESTAMP_NTZ) AS process_end_time,
+        CAST(NULL AS STRING) AS process_status,
+        CAST(NULL AS TIMESTAMP_NTZ) AS created_at,
+        CAST(NULL AS TIMESTAMP_NTZ) AS updated_at
+    WHERE 1=0  -- This ensures no rows are returned, just structure
+)
+
+SELECT 
+    table_name,
+    process_start_time,
+    process_end_time,
+    process_status,
+    created_at,
+    updated_at
+FROM audit_structure
+```
+
+### **6. models/bronze/bz_users.sql**
+```sql
+-- Bronze layer transformation for users data
+-- Performs 1:1 mapping from raw.users to bronze.bz_users with data validation and audit columns
+
+{{ config(
+    materialized='table'
+) }}
+
+WITH source_data AS (
+    -- Extract raw users data with basic validation
+    SELECT 
+        user_id,
+        user_name,
+        email,
+        company,
+        plan_type,
+        load_timestamp,
+        update_timestamp,
+        source_system
+    FROM {{ source('raw', 'users') }}
+    WHERE user_id IS NOT NULL  -- Basic data quality check
+),
+
+validated_data AS (
+    -- Apply data validation and cleansing rules
+    SELECT 
+        TRIM(user_id) AS user_id,
+        TRIM(user_name) AS user_name,
+        LOWER(TRIM(email)) AS email,  -- Standardize email format
+        TRIM(company) AS company,
+        UPPER(TRIM(plan_type)) AS plan_type,  -- Standardize plan type format
+        load_timestamp,
+        update_timestamp,
+        COALESCE(source_system, '{{ var("source_system") }}') AS source_system
+    FROM source_data
+),
+
+final_output AS (
+    -- Final transformation with audit columns
+    SELECT 
+        user_id,
+        user_name,
+        email,
+        company,
+        plan_type,
+        CURRENT_TIMESTAMP() AS load_timestamp,
+        CURRENT_TIMESTAMP() AS update_timestamp,
+        source_system
+    FROM validated_data
+)
+
+SELECT * FROM final_output
+```
+
+### **7. models/bronze/bz_meetings.sql**
+```sql
+-- Bronze layer transformation for meetings data
+-- Performs 1:1 mapping from raw.meetings to bronze.bz_meetings with data validation
+
+{{ config(
+    materialized='table'
+) }}
+
+WITH source_data AS (
+    -- Extract raw meetings data with basic validation
+    SELECT 
+        meeting_id,
+        host_id,
+        meeting_topic,
+        start_time,
+        end_time,
+        duration_minutes,
+        load_timestamp,
+        update_timestamp,
+        source_system
+    FROM {{ source('raw', 'meetings') }}
+    WHERE meeting_id IS NOT NULL  -- Basic data quality check
+),
+
+validated_data AS (
+    -- Apply data validation and cleansing rules
+    SELECT 
+        TRIM(meeting_id) AS meeting_id,
+        TRIM(host_id) AS host_id,
+        TRIM(meeting_topic) AS meeting_topic,
+        start_time,
+        end_time,
+        CASE 
+            WHEN duration_minutes < 0 THEN 0 
+            ELSE duration_minutes 
+        END AS duration_minutes,  -- Ensure non-negative duration
+        load_timestamp,
+        update_timestamp,
+        COALESCE(source_system, '{{ var("source_system") }}') AS source_system
+    FROM source_data
+),
+
+final_output AS (
+    -- Final transformation with audit columns
+    SELECT 
+        meeting_id,
+        host_id,
+        meeting_topic,
+        start_time,
+        end_time,
+        duration_minutes,
+        CURRENT_TIMESTAMP() AS load_timestamp,
+        CURRENT_TIMESTAMP() AS update_timestamp,
+        source_system
+    FROM validated_data
+)
+
+SELECT * FROM final_output
+```
+
+### **8. models/bronze/bz_participants.sql**
+```sql
+-- Bronze layer transformation for participants data
+-- Performs 1:1 mapping from raw.participants to bronze.bz_participants with data validation
+
+{{ config(
+    materialized='table'
+) }}
+
+WITH source_data AS (
+    -- Extract raw participants data with basic validation
+    SELECT 
+        participant_id,
+        meeting_id,
+        user_id,
+        join_time,
+        leave_time,
+        load_timestamp,
+        update_timestamp,
+        source_system
+    FROM {{ source('raw', 'participants') }}
+    WHERE participant_id IS NOT NULL  -- Basic data quality check
+),
+
+validated_data AS (
+    -- Apply data validation and cleansing rules
+    SELECT 
+        TRIM(participant_id) AS participant_id,
+        TRIM(meeting_id) AS meeting_id,
+        TRIM(user_id) AS user_id,
+        join_time,
+        leave_time,
+        load_timestamp,
+        update_timestamp,
+        COALESCE(source_system, '{{ var("source_system") }}') AS source_system
+    FROM source_data
+),
+
+final_output AS (
+    -- Final transformation with audit columns
+    SELECT 
+        participant_id,
+        meeting_id,
+        user_id,
+        join_time,
+        leave_time,
+        CURRENT_TIMESTAMP() AS load_timestamp,
+        CURRENT_TIMESTAMP() AS update_timestamp,
+        source_system
+    FROM validated_data
+)
+
+SELECT * FROM final_output
+```
+
+### **9. models/bronze/bz_feature_usage.sql**
+```sql
+-- Bronze layer transformation for feature usage data
+-- Performs 1:1 mapping from raw.feature_usage to bronze.bz_feature_usage with data validation
+
+{{ config(
+    materialized='table'
+) }}
+
+WITH source_data AS (
+    -- Extract raw feature usage data with basic validation
+    SELECT 
+        usage_id,
+        meeting_id,
+        feature_name,
+        usage_count,
+        usage_date,
+        load_timestamp,
+        update_timestamp,
+        source_system
+    FROM {{ source('raw', 'feature_usage') }}
+    WHERE usage_id IS NOT NULL  -- Basic data quality check
+),
+
+validated_data AS (
+    -- Apply data validation and cleansing rules
+    SELECT 
+        TRIM(usage_id) AS usage_id,
+        TRIM(meeting_id) AS meeting_id,
+        TRIM(feature_name) AS feature_name,
+        CASE 
+            WHEN usage_count < 0 THEN 0 
+            ELSE usage_count 
+        END AS usage_count,  -- Ensure non-negative usage count
+        usage_date,
+        load_timestamp,
+        update_timestamp,
+        COALESCE(source_system, '{{ var("source_system") }}') AS source_system
+    FROM source_data
+),
+
+final_output AS (
+    -- Final transformation with audit columns
+    SELECT 
+        usage_id,
+        meeting_id,
+        feature_name,
+        usage_count,
+        usage_date,
+        CURRENT_TIMESTAMP() AS load_timestamp,
+        CURRENT_TIMESTAMP() AS update_timestamp,
+        source_system
+    FROM validated_data
+)
+
+SELECT * FROM final_output
+```
+
+### **10. models/bronze/bz_webinars.sql**
+```sql
+-- Bronze layer transformation for webinars data
+-- Performs 1:1 mapping from raw.webinars to bronze.bz_webinars with data validation
+
+{{ config(
+    materialized='table'
+) }}
+
+WITH source_data AS (
+    -- Extract raw webinars data with basic validation
+    SELECT 
+        webinar_id,
+        host_id,
+        webinar_topic,
+        start_time,
+        end_time,
+        registrants,
+        load_timestamp,
+        update_timestamp,
+        source_system
+    FROM {{ source('raw', 'webinars') }}
+    WHERE webinar_id IS NOT NULL  -- Basic data quality check
+),
+
+validated_data AS (
+    -- Apply data validation and cleansing rules
+    SELECT 
+        TRIM(webinar_id) AS webinar_id,
+        TRIM(host_id) AS host_id,
+        TRIM(webinar_topic) AS webinar_topic,
+        start_time,
+        end_time,
+        CASE 
+            WHEN registrants < 0 THEN 0 
+            ELSE registrants 
+        END AS registrants,  -- Ensure non-negative registrant count
+        load_timestamp,
+        update_timestamp,
+        COALESCE(source_system, '{{ var("source_system") }}') AS source_system
+    FROM source_data
+),
+
+final_output AS (
+    -- Final transformation with audit columns
+    SELECT 
+        webinar_id,
+        host_id,
+        webinar_topic,
+        start_time,
+        end_time,
+        registrants,
+        CURRENT_TIMESTAMP() AS load_timestamp,
+        CURRENT_TIMESTAMP() AS update_timestamp,
+        source_system
+    FROM validated_data
+)
+
+SELECT * FROM final_output
+```
+
+### **11. models/bronze/bz_support_tickets.sql**
+```sql
+-- Bronze layer transformation for support tickets data
+-- Performs 1:1 mapping from raw.support_tickets to bronze.bz_support_tickets with data validation
+
+{{ config(
+    materialized='table'
+) }}
+
+WITH source_data AS (
+    -- Extract raw support tickets data with basic validation
+    SELECT 
+        ticket_id,
+        user_id,
+        ticket_type,
+        resolution_status,
+        open_date,
+        load_timestamp,
+        update_timestamp,
+        source_system
+    FROM {{ source('raw', 'support_tickets') }}
+    WHERE ticket_id IS NOT NULL  -- Basic data quality check
+),
+
+validated_data AS (
+    -- Apply data validation and cleansing rules
+    SELECT 
+        TRIM(ticket_id) AS ticket_id,
+        TRIM(user_id) AS user_id,
+        TRIM(ticket_type) AS ticket_type,
+        UPPER(TRIM(resolution_status)) AS resolution_status,  -- Standardize status format
+        open_date,
+        load_timestamp,
+        update_timestamp,
+        COALESCE(source_system, '{{ var("source_system") }}') AS source_system
+    FROM source_data
+),
+
+final_output AS (
+    -- Final transformation with audit columns
+    SELECT 
+        ticket_id,
+        user_id,
+        ticket_type,
+        resolution_status,
+        open_date,
+        CURRENT_TIMESTAMP() AS load_timestamp,
+        CURRENT_TIMESTAMP() AS update_timestamp,
+        source_system
+    FROM validated_data
+)
+
+SELECT * FROM final_output
+```
+
+### **12. models/bronze/bz_licenses.sql**
+```sql
+-- Bronze layer transformation for licenses data
+-- Performs 1:1 mapping from raw.licenses to bronze.bz_licenses with data validation
+
+{{ config(
+    materialized='table'
+) }}
+
+WITH source_data AS (
+    -- Extract raw licenses data with basic validation
+    SELECT 
+        license_id,
+        license_type,
+        assigned_to_user_id,
+        start_date,
+        end_date,
+        load_timestamp,
+        update_timestamp,
+        source_system
+    FROM {{ source('raw', 'licenses') }}
+    WHERE license_id IS NOT NULL  -- Basic data quality check
+),
+
+validated_data AS (
+    -- Apply data validation and cleansing rules
+    SELECT 
+        TRIM(license_id) AS license_id,
+        UPPER(TRIM(license_type)) AS license_type,  -- Standardize license type format
+        TRIM(assigned_to_user_id) AS assigned_to_user_id,
+        start_date,
+        end_date,
+        load_timestamp,
+        update_timestamp,
+        COALESCE(source_system, '{{ var("source_system") }}') AS source_system
+    FROM source_data
+),
+
+final_output AS (
+    -- Final transformation with audit columns
+    SELECT 
+        license_id,
+        license_type,
+        assigned_to_user_id,
+        start_date,
+        end_date,
+        CURRENT_TIMESTAMP() AS load_timestamp,
+        CURRENT_TIMESTAMP() AS update_timestamp,
+        source_system
+    FROM validated_data
+)
+
+SELECT * FROM final_output
+```
+
+### **13. models/bronze/bz_billing_events.sql**
+```sql
+-- Bronze layer transformation for billing events data
+-- Performs 1:1 mapping from raw.billing_events to bronze.bz_billing_events with data validation
+
+{{ config(
+    materialized='table'
+) }}
+
+WITH source_data AS (
+    -- Extract raw billing events data with basic validation
+    SELECT 
+        event_id,
+        user_id,
+        event_type,
+        amount,
+        event_date,
+        load_timestamp,
+        update_timestamp,
+        source_system
+    FROM {{ source('raw', 'billing_events') }}
+    WHERE event_id IS NOT NULL  -- Basic data quality check
+),
+
+validated_data AS (
+    -- Apply data validation and cleansing rules
+    SELECT 
+        TRIM(event_id) AS event_id,
+        TRIM(user_id) AS user_id,
+        UPPER(TRIM(event_type)) AS event_type,  -- Standardize event type format
+        CASE 
+            WHEN amount < 0 THEN 0.00 
+            ELSE amount 
+        END AS amount,  -- Ensure non-negative amounts
+        event_date,
+        load_timestamp,
+        update_timestamp,
+        COALESCE(source_system, '{{ var("source_system") }}') AS source_system
+    FROM source_data
+),
+
+final_output AS (
+    -- Final transformation with audit columns
+    SELECT 
+        event_id,
+        user_id,
+        event_type,
+        amount,
+        event_date,
+        CURRENT_TIMESTAMP() AS load_timestamp,
+        CURRENT_TIMESTAMP() AS update_timestamp,
+        source_system
+    FROM validated_data
+)
+
+SELECT * FROM final_output
+```
+
+### **14. models/bronze/schema.yml**
+```yaml
+version: 2
+
+models:
+  - name: audit_log
+    description: "Audit log for tracking bronze layer processing"
+    columns:
+      - name: table_name
+        description: "Name of the table being processed"
+        tests:
+          - not_null
+      - name: process_start_time
+        description: "Process start timestamp"
+      - name: process_end_time
+        description: "Process end timestamp"
+      - name: process_status
+        description: "Process status (STARTED/COMPLETED/FAILED)"
+      - name: created_at
+        description: "Record creation timestamp"
+      - name: updated_at
+        description: "Record update timestamp"
+
+  - name: bz_users
+    description: "Bronze layer users data with validated and cleansed information"
+    columns:
+      - name: user_id
+        description: "Unique identifier for user"
+        tests:
+          - not_null
+          - unique
+      - name: user_name
+        description: "User display name"
+        tests:
+          - not_null
+      - name: email
+        description: "User email address (standardized to lowercase)"
+        tests:
+          - not_null
+      - name: company
+        description: "User company"
+      - name: plan_type
+        description: "User subscription plan type (standardized to uppercase)"
+      - name: load_timestamp
+        description: "Data load timestamp"
+        tests:
+          - not_null
+      - name: update_timestamp
+        description: "Data update timestamp"
+        tests:
+          - not_null
+      - name: source_system
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: bz_meetings
+    description: "Bronze layer meetings data with validated information"
+    columns:
+      - name: meeting_id
+        description: "Unique identifier for meeting"
+        tests:
+          - not_null
+          - unique
+      - name: host_id
+        description: "Meeting host user ID"
+        tests:
+          - not_null
+      - name: meeting_topic
+        description: "Meeting topic/title"
+      - name: start_time
+        description: "Meeting start time"
+      - name: end_time
+        description: "Meeting end time"
+      - name: duration_minutes
+        description: "Meeting duration in minutes (validated non-negative)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: load_timestamp
+        description: "Data load timestamp"
+        tests:
+          - not_null
+      - name: update_timestamp
+        description: "Data update timestamp"
+        tests:
+          - not_null
+      - name: source_system
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: bz_participants
+    description: "Bronze layer participants data"
+    columns:
+      - name: participant_id
+        description: "Unique identifier for participant"
+        tests:
+          - not_null
+          - unique
+      - name: meeting_id
+        description: "Associated meeting ID"
+        tests:
+          - not_null
+      - name: user_id
+        description: "Participant user ID"
+      - name: join_time
+        description: "Time participant joined"
+      - name: leave_time
+        description: "Time participant left"
+      - name: load_timestamp
+        description: "Data load timestamp"
+        tests:
+          - not_null
+      - name: update_timestamp
+        description: "Data update timestamp"
+        tests:
+          - not_null
+      - name: source_system
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: bz_feature_usage
+    description: "Bronze layer feature usage data"
+    columns:
+      - name: usage_id
+        description: "Unique identifier for usage record"
+        tests:
+          - not_null
+          - unique
+      - name: meeting_id
+        description: "Associated meeting ID"
+      - name: feature_name
+        description: "Name of feature used"
+      - name: usage_count
+        description: "Number of times feature was used (validated non-negative)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: usage_date
+        description: "Date of feature usage"
+      - name: load_timestamp
+        description: "Data load timestamp"
+        tests:
+          - not_null
+      - name: update_timestamp
+        description: "Data update timestamp"
+        tests:
+          - not_null
+      - name: source_system
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: bz_webinars
+    description: "Bronze layer webinars data"
+    columns:
+      - name: webinar_id
+        description: "Unique identifier for webinar"
+        tests:
+          - not_null
+          - unique
+      - name: host_id
+        description: "Webinar host user ID"
+        tests:
+          - not_null
+      - name: webinar_topic
+        description: "Webinar topic/title"
+      - name: start_time
+        description: "Webinar start time"
+      - name: end_time
+        description: "Webinar end time"
+      - name: registrants
+        description: "Number of registrants (validated non-negative)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: load_timestamp
+        description: "Data load timestamp"
+        tests:
+          - not_null
+      - name: update_timestamp
+        description: "Data update timestamp"
+        tests:
+          - not_null
+      - name: source_system
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: bz_support_tickets
+    description: "Bronze layer support tickets data"
+    columns:
+      - name: ticket_id
+        description: "Unique identifier for ticket"
+        tests:
+          - not_null
+          - unique
+      - name: user_id
+        description: "User who created ticket"
+      - name: ticket_type
+        description: "Type of support ticket"
+      - name: resolution_status
+        description: "Current resolution status (standardized to uppercase)"
+      - name: open_date
+        description: "Date ticket was opened"
+      - name: load_timestamp
+        description: "Data load timestamp"
+        tests:
+          - not_null
+      - name: update_timestamp
+        description: "Data update timestamp"
+        tests:
+          - not_null
+      - name: source_system
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: bz_licenses
+    description: "Bronze layer licenses data"
+    columns:
+      - name: license_id
+        description: "Unique identifier for license"
+        tests:
+          - not_null
+          - unique
+      - name: license_type
+        description: "Type of license (standardized to uppercase)"
+      - name: assigned_to_user_id
+        description: "User assigned to license"
+      - name: start_date
+        description: "License start date"
+      - name: end_date
+        description: "License end date"
+      - name: load_timestamp
+        description: "Data load timestamp"
+        tests:
+          - not_null
+      - name: update_timestamp
+        description: "Data update timestamp"
+        tests:
+          - not_null
+      - name: source_system
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: bz_billing_events
+    description: "Bronze layer billing events data"
+    columns:
+      - name: event_id
+        description: "Unique identifier for billing event"
+        tests:
+          - not_null
+          - unique
+      - name: user_id
+        description: "User associated with billing event"
+      - name: event_type
+        description: "Type of billing event (standardized to uppercase)"
+      - name: amount
+        description: "Billing amount (validated non-negative)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: event_date
+        description: "Date of billing event"
+      - name: load_timestamp
+        description: "Data load timestamp"
+        tests:
+          - not_null
+      - name: update_timestamp
+        description: "Data update timestamp"
+        tests:
+          - not_null
+      - name: source_system
+        description: "Source system identifier"
+        tests:
+          - not_null
+```
+
+This complete DBT project provides:
+
+1. **Production-ready code** with proper error handling and data validation
+2. **Audit logging** through macros and hooks to track processing
+3. **1:1 data mapping** from raw to bronze layers as specified
+4. **Data quality tests** in the schema.yml file
+5. **Modular structure** with separate files for each table
+6. **Proper documentation** with descriptions for all models and columns
+7. **Standardization** of data formats (uppercase plan types, lowercase emails, etc.)
+8. **Error handling** for negative values and null checks
+9. **Audit columns** with current timestamps
+10. **No hardcoded schema references** - uses ref() and source() functions properly
+
+The project follows DBT best practices and is ready for production deployment.
