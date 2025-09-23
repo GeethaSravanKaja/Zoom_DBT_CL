@@ -1,0 +1,170 @@
+yaml
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw data from Zoom platform"
+    tables:
+      - name: users
+        description: "Raw user data"
+        columns:
+          - name: user_id
+            description: "Unique identifier for user"
+          - name: user_name
+            description: "User display name"
+          - name: email
+            description: "User email address"
+          - name: company
+            description: "User company"
+          - name: plan_type
+            description: "User subscription plan type"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: meetings
+        description: "Raw meeting data"
+        columns:
+          - name: meeting_id
+            description: "Unique identifier for meeting"
+          - name: host_id
+            description: "Meeting host user ID"
+          - name: meeting_topic
+            description: "Meeting topic/title"
+          - name: start_time
+            description: "Meeting start time"
+          - name: end_time
+            description: "Meeting end time"
+          - name: duration_minutes
+            description: "Meeting duration in minutes"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: participants
+        description: "Raw participant data"
+        columns:
+          - name: participant_id
+            description: "Unique identifier for participant"
+          - name: meeting_id
+            description: "Associated meeting ID"
+          - name: user_id
+            description: "Participant user ID"
+          - name: join_time
+            description: "Time participant joined"
+          - name: leave_time
+            description: "Time participant left"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: feature_usage
+        description: "Raw feature usage data"
+        columns:
+          - name: usage_id
+            description: "Unique identifier for usage record"
+          - name: meeting_id
+            description: "Associated meeting ID"
+          - name: feature_name
+            description: "Name of feature used"
+          - name: usage_count
+            description: "Number of times feature was used"
+          - name: usage_date
+            description: "Date of feature usage"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: webinars
+        description: "Raw webinar data"
+        columns:
+          - name: webinar_id
+            description: "Unique identifier for webinar"
+          - name: host_id
+            description: "Webinar host user ID"
+          - name: webinar_topic
+            description: "Webinar topic/title"
+          - name: start_time
+            description: "Webinar start time"
+          - name: end_time
+            description: "Webinar end time"
+          - name: registrants
+            description: "Number of registrants"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: support_tickets
+        description: "Raw support ticket data"
+        columns:
+          - name: ticket_id
+            description: "Unique identifier for ticket"
+          - name: user_id
+            description: "User who created ticket"
+          - name: ticket_type
+            description: "Type of support ticket"
+          - name: resolution_status
+            description: "Current resolution status"
+          - name: open_date
+            description: "Date ticket was opened"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: licenses
+        description: "Raw license data"
+        columns:
+          - name: license_id
+            description: "Unique identifier for license"
+          - name: license_type
+            description: "Type of license"
+          - name: assigned_to_user_id
+            description: "User assigned to license"
+          - name: start_date
+            description: "License start date"
+          - name: end_date
+            description: "License end date"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: billing_events
+        description: "Raw billing event data"
+        columns:
+          - name: event_id
+            description: "Unique identifier for billing event"
+          - name: user_id
+            description: "User associated with billing event"
+          - name: event_type
+            description: "Type of billing event"
+          - name: amount
+            description: "Billing amount"
+          - name: event_date
+            description: "Date of billing event"
+          - name: load_timestamp
+            description: "Data load timestamp"
+          - name: update_timestamp
+            description: "Data update timestamp"
+          - name: source_system
+            description: "Source system identifier"
