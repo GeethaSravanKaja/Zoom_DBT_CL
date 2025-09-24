@@ -1,0 +1,35 @@
+name: 'ZOOM_POC'
+version: '1.0.0'
+config-version: 2
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Configuring models
+models:
+  ZOOM_POC:
+    # Applies to all models under models/
+    +materialized: table
+    +on_schema_change: fail
+
+    staging:
+      +materialized: view
+
+    gold:
+      +materialized: table
+      +pre-hook: "{{ audit_model_start(this.name,ref('go_process_audit')) }}"
+      +post-hook: "{{ audit_model_end(this.name,ref('go_process_audit'), record_count) }}"
+
+vars:
+  # The `start_date` variable will be accessible in all resources
+  start_date: '2020-01-01'

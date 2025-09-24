@@ -1,0 +1,193 @@
+version: 2
+
+sources:
+  - name: silver
+    description: "Silver layer tables containing cleaned and validated data"
+    database: "{{ var('database', target.database) }}"
+    schema: silver
+    tables:
+      - name: sv_users
+        description: "Silver users table with user information"
+        columns:
+          - name: user_id
+            description: "Unique identifier for user"
+            tests:
+              - not_null
+              - unique
+          - name: user_name
+            description: "User display name"
+          - name: email
+            description: "User email address"
+          - name: company
+            description: "User company"
+          - name: plan_type
+            description: "User plan type"
+          - name: load_timestamp
+            description: "Record load timestamp"
+          - name: update_timestamp
+            description: "Record update timestamp"
+          - name: source_system
+            description: "Source system identifier"
+          - name: load_date
+            description: "Load date"
+          - name: update_date
+            description: "Update date"
+          - name: data_quality_score
+            description: "Data quality score"
+          - name: record_status
+            description: "Record status"
+
+      - name: sv_meetings
+        description: "Silver meetings table"
+        columns:
+          - name: meeting_id
+            description: "Unique identifier for meeting"
+            tests:
+              - not_null
+              - unique
+          - name: host_id
+            description: "Meeting host user ID"
+          - name: meeting_topic
+            description: "Meeting topic"
+          - name: start_time
+            description: "Meeting start time"
+          - name: end_time
+            description: "Meeting end time"
+          - name: duration_minutes
+            description: "Meeting duration in minutes"
+
+      - name: sv_participants
+        description: "Silver participants table"
+        columns:
+          - name: participant_id
+            description: "Unique identifier for participant"
+          - name: meeting_id
+            description: "Meeting identifier"
+          - name: user_id
+            description: "User identifier"
+          - name: join_time
+            description: "Participant join time"
+          - name: leave_time
+            description: "Participant leave time"
+
+      - name: sv_licenses
+        description: "Silver licenses table"
+        columns:
+          - name: license_id
+            description: "Unique identifier for license"
+          - name: license_type
+            description: "Type of license"
+          - name: assigned_to_user_id
+            description: "User ID assigned to license"
+          - name: start_date
+            description: "License start date"
+          - name: end_date
+            description: "License end date"
+
+models:
+  - name: go_process_audit
+    description: "Gold layer process audit table for tracking DBT model executions"
+    columns:
+      - name: execution_id
+        description: "Unique execution identifier"
+        tests:
+          - not_null
+      - name: pipeline_name
+        description: "Name of the pipeline/model"
+      - name: process_type
+        description: "Type of process"
+      - name: start_time
+        description: "Process start time"
+      - name: end_time
+        description: "Process end time"
+      - name: status
+        description: "Process status"
+      - name: records_processed
+        description: "Number of records processed"
+
+  - name: go_user_dimension
+    description: "Gold layer user dimension table"
+    columns:
+      - name: user_dim_id
+        description: "Surrogate key for user dimension"
+        tests:
+          - not_null
+          - unique
+      - name: user_id
+        description: "Business key - user identifier"
+        tests:
+          - not_null
+      - name: user_name
+        description: "User display name"
+      - name: email_address
+        description: "User email address"
+      - name: user_type
+        description: "Type of user account"
+      - name: account_status
+        description: "Status of user account"
+      - name: license_type
+        description: "Current license type"
+
+  - name: go_time_dimension
+    description: "Gold layer time dimension table"
+    columns:
+      - name: time_dim_id
+        description: "Surrogate key for time dimension"
+        tests:
+          - not_null
+          - unique
+      - name: date_key
+        description: "Date key"
+        tests:
+          - not_null
+      - name: year_number
+        description: "Year number"
+      - name: quarter_number
+        description: "Quarter number"
+      - name: month_number
+        description: "Month number"
+      - name: month_name
+        description: "Month name"
+
+  - name: go_device_dimension
+    description: "Gold layer device dimension table"
+    columns:
+      - name: device_dim_id
+        description: "Surrogate key for device dimension"
+        tests:
+          - not_null
+          - unique
+      - name: device_connection_id
+        description: "Device connection identifier"
+      - name: device_type
+        description: "Type of device"
+      - name: operating_system
+        description: "Operating system"
+
+  - name: go_organization_dimension
+    description: "Gold layer organization dimension table"
+    columns:
+      - name: organization_dim_id
+        description: "Surrogate key for organization dimension"
+        tests:
+          - not_null
+          - unique
+      - name: organization_id
+        description: "Business key - organization identifier"
+      - name: organization_name
+        description: "Organization name"
+
+  - name: go_geography_dimension
+    description: "Gold layer geography dimension table"
+    columns:
+      - name: geography_dim_id
+        description: "Surrogate key for geography dimension"
+        tests:
+          - not_null
+          - unique
+      - name: country_code
+        description: "Country code"
+      - name: country_name
+        description: "Country name"
+      - name: region_name
+        description: "Region name"
